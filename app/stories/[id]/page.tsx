@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, use } from 'react';
+import React, { useEffect, useState, use, useRef } from 'react';
 import Link from 'next/link';
 import DualAudioPlayer, { CharacterInfo, SegmentInfo } from '@/components/DualAudioPlayer';
 import { supabase } from '@/lib/supabase';
@@ -20,6 +20,8 @@ export default function StoryDetailPage({ params }: PageProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [generatingCount, setGeneratingCount] = useState(0);
+
+  const isGeneratingRef = useRef(false);
 
   // Fetch story data from Supabase
   const loadStoryData = async () => {
@@ -44,7 +46,7 @@ export default function StoryDetailPage({ params }: PageProps) {
         .select('character_name, base_voice, pitch, rate')
         .eq('story_id', storyId);
 
-      setCharacters(charData as CharacterInfo[] || []);
+      setCharacters((charData as CharacterInfo[]) || []);
 
       // 3. Fetch segments ordered by sequence_order
       const { data: segData, error: segErr } = await supabase
@@ -57,7 +59,7 @@ export default function StoryDetailPage({ params }: PageProps) {
         throw new Error(`Gagal memuat segmen cerita: ${segErr.message}`);
       }
 
-      setSegments(segData as SegmentInfo[] || []);
+      setSegments((segData as SegmentInfo[]) || []);
     } catch (err: any) {
       setError(err?.message || 'Gagal memuat data cerita');
     } finally {
@@ -71,9 +73,9 @@ export default function StoryDetailPage({ params }: PageProps) {
     }
   }, [storyId]);
 
-  // Client-side Async Pipeline: Generate audio segments in sequence
+  // High-Efficiency Concurrent & Priority Audio Generation Pipeline
   useEffect(() => {
-    if (segments.length === 0) return;
+    if (segments.length === 0 || isGeneratingRef.current) return;
 
     const pendingSegments = segments.filter(
       (s) => s.status === 'pending' || !s.audio_url
@@ -81,56 +83,79 @@ export default function StoryDetailPage({ params }: PageProps) {
 
     if (pendingSegments.length === 0) return;
 
+    isGeneratingRef.current = true;
     let isSubscribed = true;
 
-    const generatePipeline = async () => {
-      setGeneratingCount(pendingSegments.length);
+    const generateSegmentWorker = async (seg: SegmentInfo) => {
+      if (!isSubscribed) return;
 
-      for (const seg of pendingSegments) {
-        if (!isSubscribed) break;
+      setSegments((prev) =>
+        prev.map((s) => (s.id === seg.id ? { ...s, status: 'generating' } : s))
+      );
 
-        // Update local segment status to generating
-        setSegments((prev) =>
-          prev.map((s) => (s.id === seg.id ? { ...s, status: 'generating' } : s))
-        );
+      try {
+        const res = await fetch('/api/generate-segment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ segmentId: seg.id }),
+        });
 
-        try {
-          const res = await fetch('/api/generate-segment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ segmentId: seg.id }),
-          });
-
-          if (res.ok) {
-            const data = await res.json();
-            if (isSubscribed) {
-              setSegments((prev) =>
-                prev.map((s) =>
-                  s.id === seg.id
-                    ? { ...s, audio_url: data.audioUrl, status: 'ready' }
-                    : s
-                )
-              );
-            }
-          } else {
-            if (isSubscribed) {
-              setSegments((prev) =>
-                prev.map((s) => (s.id === seg.id ? { ...s, status: 'error' } : s))
-              );
-            }
+        if (res.ok) {
+          const data = await res.json();
+          if (isSubscribed) {
+            setSegments((prev) =>
+              prev.map((s) =>
+                s.id === seg.id
+                  ? { ...s, audio_url: data.audioUrl, status: 'ready' }
+                  : s
+              )
+            );
           }
-        } catch (err) {
-          console.warn('Async segment generation failed:', err);
+        } else {
+          if (isSubscribed) {
+            setSegments((prev) =>
+              prev.map((s) => (s.id === seg.id ? { ...s, status: 'error' } : s))
+            );
+          }
         }
-
-        setGeneratingCount((prev) => Math.max(0, prev - 1));
+      } catch (err) {
+        console.warn('Async segment generation failed:', err);
+      } finally {
+        if (isSubscribed) {
+          setGeneratingCount((prev) => Math.max(0, prev - 1));
+        }
       }
     };
 
-    generatePipeline();
+    const runParallelPipeline = async () => {
+      setGeneratingCount(pendingSegments.length);
+
+      // Concurrent queue with concurrency of 2 workers
+      const concurrency = 2;
+      const queue = [...pendingSegments];
+
+      const runWorker = async () => {
+        while (queue.length > 0 && isSubscribed) {
+          const item = queue.shift();
+          if (item) {
+            await generateSegmentWorker(item);
+          }
+        }
+      };
+
+      const workers = Array.from({ length: Math.min(concurrency, queue.length) }, () =>
+        runWorker()
+      );
+
+      await Promise.all(workers);
+      isGeneratingRef.current = false;
+    };
+
+    runParallelPipeline();
 
     return () => {
       isSubscribed = false;
+      isGeneratingRef.current = false;
     };
   }, [segments.length]);
 
@@ -185,7 +210,7 @@ export default function StoryDetailPage({ params }: PageProps) {
           {generatingCount > 0 && (
             <div className="flex items-center space-x-2 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full text-xs font-semibold text-amber-300 animate-pulse">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              <span>Memproses Sintesis Audio ({generatingCount} sisa)...</span>
+              <span>Sintesis Paralel ({generatingCount} sisa)...</span>
             </div>
           )}
 
