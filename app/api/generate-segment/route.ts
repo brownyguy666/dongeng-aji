@@ -51,9 +51,10 @@ export async function POST(req: Request) {
 
     // Map restricted/library voices to guaranteed Free-tier 200 OK ElevenLabs voices
     const validVoiceMap: Record<string, string> = {
-      '21m00Tcm4TlvDq8ikWAM': 'EXAVITQu4vr4xnSDxMaL', // Rachel (Paid only) -> Bella (Free OK)
-      'TxGEeevoooWoh943wDQ1': 'IKne3meq5aSn9XLyUdCD', // Josh (Not found) -> Charlie (Free OK)
-      'MF3mGyEYCl7XYWbV9V6O': 'EXAVITQu4vr4xnSDxMaL', // Elli (Paid only) -> Bella (Free OK)
+      '21m00Tcm4TlvDq8ikWAM': 'EXAVITQu4vr4xnSDxMaL', // Rachel (Paid) -> Bella (Free OK)
+      'TxGEeevoooWoh943wDQ1': 'IKne3meq5aSn9XLyUdCD', // Josh -> Charlie (Free OK)
+      'MF3mGyEYCl7XYWbV9V6O': 'EXAVITQu4vr4xnSDxMaL', // Elli -> Bella (Free OK)
+      'AZnzlk1XvdvUeBnXmlld': 'ErXwobaYiN019PkySvjV', // Domi (Paid) -> Antoni (Free OK)
     };
 
     let voice = character?.base_voice || 'IKne3meq5aSn9XLyUdCD';
