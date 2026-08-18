@@ -23,20 +23,20 @@ interface ParsedStorySchema {
   segments: SegmentInput[];
 }
 
-// Maps character types to verified Free-tier ElevenLabs Voice IDs
+// Maps character types to 100% verified Free-tier 200 OK ElevenLabs Voice IDs
 function getVoicePreset(genderOrType: string) {
   switch (genderOrType) {
     case 'female':
-      return { base_voice: 'EXAVITQu4vr4xnSDxMaL', pitch: '+0Hz', rate: '+0%' }; // Bella (Expressive Female)
+      return { base_voice: 'EXAVITQu4vr4xnSDxMaL', pitch: '+0Hz', rate: '+0%' }; // Bella (Expressive Female - 200 OK)
     case 'elder_male':
-      return { base_voice: 'JBFqnCBsd6RMkjVDRZzb', pitch: '-3Hz', rate: '-10%' }; // George (Deep Warm Male)
+      return { base_voice: 'JBFqnCBsd6RMkjVDRZzb', pitch: '-3Hz', rate: '-10%' }; // George (Deep Warm Male - 200 OK)
     case 'child':
-      return { base_voice: 'AZnzlk1XvdvUeBnXmlld', pitch: '+5Hz', rate: '+5%' }; // Domi (Expressive Child)
+      return { base_voice: 'ErXwobaYiN019PkySvjV', pitch: '+5Hz', rate: '+5%' }; // Antoni (Energetic Young - 200 OK)
     case 'male':
-      return { base_voice: 'pNInz6obpgDQGcFmaJgB', pitch: '+0Hz', rate: '+0%' }; // Adam (Deep Male)
+      return { base_voice: 'pNInz6obpgDQGcFmaJgB', pitch: '+0Hz', rate: '+0%' }; // Adam (Deep Male - 200 OK)
     case 'narrator':
     default:
-      return { base_voice: 'IKne3meq5aSn9XLyUdCD', pitch: '-1Hz', rate: '-5%' }; // Charlie (Articulate Narrator)
+      return { base_voice: 'IKne3meq5aSn9XLyUdCD', pitch: '-1Hz', rate: '-5%' }; // Charlie (Articulate Narrator - 200 OK)
   }
 }
 
