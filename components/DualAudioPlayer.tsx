@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Play,
   Pause,
@@ -9,9 +9,7 @@ import {
   Volume2,
   VolumeX,
   Music,
-  User,
   Radio,
-  Sparkles,
   CheckCircle2,
   Loader2,
   ListMusic,
@@ -43,11 +41,11 @@ interface DualAudioPlayerProps {
 }
 
 const AMBIENT_TITLES: Record<string, string> = {
-  forest_night: '🌲 Hutan Malam Sunyi & Jangkrik',
-  rainy_day: '🌧️ Hujan Rintik & Gemuruh Lembut',
+  forest_night: '🌲 Hutan Malam Sunyi',
+  rainy_day: '🌧️ Hujan Rintik Syahdu',
   tavern_crowd: '🍺 Kedai Hangat & Perapian',
-  medieval_castle: '🏰 Istana Megah & Angin Dingin',
-  calm_room: '📖 Kamar Dongeng Santai & Damai',
+  medieval_castle: '🏰 Istana Kerajaan Megah',
+  calm_room: '📖 Kamar Dongeng Tenang',
 };
 
 export default function DualAudioPlayer({
@@ -59,149 +57,56 @@ export default function DualAudioPlayer({
 }: DualAudioPlayerProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [ambientVolume, setAmbientVolume] = useState(0.5);
+  const [ambientVolume, setAmbientVolume] = useState(0.3);
   const [isMuted, setIsMuted] = useState(false);
   const [isDucked, setIsDucked] = useState(false);
   const [isGeneratingCurrent, setIsGeneratingCurrent] = useState(false);
 
-  // Audio References
+  // Audio Elements Ref
   const voiceAudioRef = useRef<HTMLAudioElement | null>(null);
-  const preloadedAudioRef = useRef<HTMLAudioElement | null>(null);
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const masterGainRef = useRef<GainNode | null>(null);
-  const ambientNodesRef = useRef<any[]>([]);
+  const ambientAudioRef = useRef<HTMLAudioElement | null>(null);
   const activeSegmentRef = useRef<HTMLDivElement | null>(null);
 
   const currentSegment = segments[currentIndex] || null;
 
-  // Find character preset
+  // Find character voice info
   const speakerChar = characters.find(
     (c) => c.character_name.toLowerCase() === currentSegment?.speaker_name?.toLowerCase()
   );
 
-  // --- Professional Procedural Ambient Sound Engine ---
-  const startProceduralAmbient = useCallback(() => {
-    try {
-      if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
-        audioCtxRef.current.resume();
-        return;
-      }
-
-      if (audioCtxRef.current) return;
-
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioCtx) return;
-
-      const ctx = new AudioCtx();
-      audioCtxRef.current = ctx;
-
-      const masterGain = ctx.createGain();
-      const initialVol = isMuted ? 0 : isDucked ? 0.15 : ambientVolume;
-      masterGain.gain.setValueAtTime(initialVol * 0.25, ctx.currentTime);
-      masterGain.connect(ctx.destination);
-      masterGainRef.current = masterGain;
-
-      const nodes: any[] = [];
-      const mood = ambientMood || 'forest_night';
-
-      if (mood === 'rainy_day') {
-        // Rain Noise Generator
-        const bufferSize = ctx.sampleRate * 2;
-        const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-        const output = noiseBuffer.getChannelData(0);
-        let lastOut = 0.0;
-        for (let i = 0; i < bufferSize; i++) {
-          const white = Math.random() * 2 - 1;
-          output[i] = (lastOut + 0.02 * white) / 1.02; // Pink-ish noise filter
-          lastOut = output[i];
-          output[i] *= 3.5;
-        }
-
-        const whiteNoise = ctx.createBufferSource();
-        whiteNoise.buffer = noiseBuffer;
-        whiteNoise.loop = true;
-
-        const rainFilter = ctx.createBiquadFilter();
-        rainFilter.type = 'lowpass';
-        rainFilter.frequency.setValueAtTime(800, ctx.currentTime);
-
-        whiteNoise.connect(rainFilter);
-        rainFilter.connect(masterGain);
-        whiteNoise.start();
-        nodes.push(whiteNoise, rainFilter);
-      } else {
-        // Multi-layered Atmospheric Harmonic Drone
-        const freqs =
-          mood === 'forest_night'
-            ? [110, 164.81, 220] // A2, E3, A3
-            : mood === 'tavern_crowd'
-            ? [130.81, 196, 261.63] // C3, G3, C4
-            : mood === 'medieval_castle'
-            ? [98, 146.83, 196] // G2, D3, G3
-            : [110, 138.59, 164.81]; // Calm warm A major
-
-        freqs.forEach((freq, idx) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-
-          osc.type = idx === 0 ? 'sine' : 'triangle';
-          osc.frequency.setValueAtTime(freq, ctx.currentTime);
-          gain.gain.setValueAtTime(0.15 / (idx + 1), ctx.currentTime);
-
-          osc.connect(gain);
-          gain.connect(masterGain);
-          osc.start();
-          nodes.push(osc, gain);
-        });
-      }
-
-      ambientNodesRef.current = nodes;
-    } catch (e) {
-      console.warn('Ambient Web Audio Engine Error:', e);
-    }
-  }, [ambientMood, ambientVolume, isDucked, isMuted]);
-
-  const stopProceduralAmbient = useCallback(() => {
-    if (audioCtxRef.current && audioCtxRef.current.state === 'running') {
-      audioCtxRef.current.suspend();
-    }
-  }, []);
-
-  // Sync Ambient Volume with Smooth Fade Auto-Ducking
+  // Initialize Ambient Audio Channel (Real ambient MP3 loop, zero electronic buzzing)
   useEffect(() => {
-    if (!masterGainRef.current || !audioCtxRef.current) return;
-    const targetVol = isMuted ? 0 : isDucked ? 0.15 : ambientVolume;
-    const ctx = audioCtxRef.current;
+    const mood = ambientMood || 'forest_night';
+    const audio = new Audio(`/audio/ambient/${mood}.mp3`);
+    audio.loop = true;
+    audio.volume = isMuted ? 0 : isDucked ? 0.10 : ambientVolume;
+    ambientAudioRef.current = audio;
 
-    // Smooth exponential/linear gain ramp for professional studio ducking
-    masterGainRef.current.gain.cancelScheduledValues(ctx.currentTime);
-    masterGainRef.current.gain.linearRampToValueAtTime(
-      targetVol * 0.25,
-      ctx.currentTime + 0.3
-    );
+    return () => {
+      audio.pause();
+      audio.src = '';
+    };
+  }, [ambientMood]);
+
+  // Sync Ambient Volume with Auto-Ducking
+  useEffect(() => {
+    if (ambientAudioRef.current) {
+      ambientAudioRef.current.volume = isMuted ? 0 : isDucked ? 0.10 : ambientVolume;
+    }
   }, [ambientVolume, isMuted, isDucked]);
 
-  // Preload Next Segment for Instant Gapless Continuous Playback
-  useEffect(() => {
-    const nextSegment = segments[currentIndex + 1];
-    if (nextSegment && nextSegment.audio_url) {
-      const preload = new Audio(nextSegment.audio_url);
-      preload.preload = 'auto';
-      preloadedAudioRef.current = preload;
-    }
-  }, [currentIndex, segments]);
-
-  // Scroll active segment into view
+  // Scroll active segment into view in the transcript list
   useEffect(() => {
     if (activeSegmentRef.current) {
       activeSegmentRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   }, [currentIndex]);
 
-  // Manage Voice Audio Playback
+  // Handle Play / Pause Voice Audio and Segment Audio Transition
   useEffect(() => {
     if (!currentSegment) return;
 
+    // If segment has no audio URL yet, trigger on-demand generation
     if (!currentSegment.audio_url && onGenerateSegment && currentSegment.status !== 'generating') {
       setIsGeneratingCurrent(true);
       onGenerateSegment(currentSegment.id)
@@ -210,57 +115,80 @@ export default function DualAudioPlayer({
     }
 
     if (currentSegment.audio_url) {
-      if (voiceAudioRef.current) {
-        voiceAudioRef.current.pause();
+      const audio = voiceAudioRef.current;
+      if (!audio) return;
+
+      // Update source
+      if (audio.src !== currentSegment.audio_url) {
+        audio.src = currentSegment.audio_url;
+        audio.load();
       }
-
-      const voice = new Audio(currentSegment.audio_url);
-      voiceAudioRef.current = voice;
-
-      voice.onplay = () => {
-        setIsDucked(true); // Auto-ducking: volume down to 0.15
-        startProceduralAmbient();
-      };
-
-      voice.onpause = () => {
-        setIsDucked(false);
-      };
-
-      voice.onended = () => {
-        setIsDucked(false); // Restore volume
-        
-        // Instant Continuous Playback to next segment
-        if (currentIndex < segments.length - 1) {
-          setCurrentIndex((prev) => prev + 1);
-        } else {
-          setIsPlaying(false);
-          stopProceduralAmbient();
-        }
-      };
 
       if (isPlaying) {
-        voice.play().catch((err) => console.warn('Voice play error:', err));
-        startProceduralAmbient();
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              setIsDucked(true);
+              if (ambientAudioRef.current && !isMuted) {
+                ambientAudioRef.current.play().catch(() => {});
+              }
+            })
+            .catch((err) => {
+              console.warn('Playback interrupted or autoplay prevented:', err);
+            });
+        }
       }
     }
-  }, [currentIndex, currentSegment?.audio_url, isPlaying, startProceduralAmbient, stopProceduralAmbient]);
+  }, [currentIndex, currentSegment?.audio_url, isPlaying]);
 
-  const togglePlayPause = async () => {
+  const togglePlayPause = () => {
+    const audio = voiceAudioRef.current;
+    if (!audio) return;
+
     if (!isPlaying) {
       setIsPlaying(true);
-      startProceduralAmbient();
 
-      if (voiceAudioRef.current) {
-        voiceAudioRef.current.play().catch(() => {});
+      // Play Ambient BGM
+      if (ambientAudioRef.current && !isMuted) {
+        ambientAudioRef.current.play().catch(() => {});
+      }
+
+      // Play Voice Audio
+      if (currentSegment?.audio_url) {
+        audio.play().catch((err) => console.warn('Play error:', err));
+        setIsDucked(true);
       }
     } else {
       setIsPlaying(false);
-      stopProceduralAmbient();
+      audio.pause();
+      if (ambientAudioRef.current) {
+        ambientAudioRef.current.pause();
+      }
+      setIsDucked(false);
+    }
+  };
 
-      if (voiceAudioRef.current) {
-        voiceAudioRef.current.pause();
+  const handleVoiceEnded = () => {
+    setIsDucked(false);
+
+    // Continuous Playback: Automatically move to next segment
+    if (currentIndex < segments.length - 1) {
+      setCurrentIndex((prev) => prev + 1);
+    } else {
+      setIsPlaying(false);
+      if (ambientAudioRef.current) {
+        ambientAudioRef.current.pause();
       }
     }
+  };
+
+  const handleVoicePlay = () => {
+    setIsDucked(true);
+  };
+
+  const handleVoicePause = () => {
+    setIsDucked(false);
   };
 
   const handleNext = () => {
@@ -277,6 +205,15 @@ export default function DualAudioPlayer({
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6 text-slate-100">
+      {/* Hidden Native HTML Audio Element for Voice Channel */}
+      <audio
+        ref={voiceAudioRef}
+        onEnded={handleVoiceEnded}
+        onPlay={handleVoicePlay}
+        onPause={handleVoicePause}
+        preload="auto"
+      />
+
       {/* Active Stage & Player Hero */}
       <div className="relative bg-slate-900/90 backdrop-blur-2xl border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl shadow-purple-950/30 overflow-hidden">
         {/* Ambient Mood Glow Background */}
@@ -324,7 +261,7 @@ export default function DualAudioPlayer({
                     Segmen {currentIndex + 1} dari {segments.length}
                     {speakerChar && (
                       <span className="ml-2 text-purple-400">
-                        • Voice ID: {speakerChar.base_voice}
+                        • Tokoh: {speakerChar.character_name}
                       </span>
                     )}
                   </span>
@@ -374,7 +311,7 @@ export default function DualAudioPlayer({
                 <button
                   onClick={togglePlayPause}
                   className="w-16 h-16 bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:from-purple-500 hover:to-amber-400 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-purple-600/30 hover:scale-105 active:scale-95 transition duration-200"
-                  title={isPlaying ? 'Jeda Suara & Ambient' : 'Putar Cerita'}
+                  title={isPlaying ? 'Jeda Cerita' : 'Putar Cerita'}
                 >
                   {isPlaying ? <Pause className="w-7 h-7" /> : <Play className="w-7 h-7 ml-1" />}
                 </button>
@@ -389,20 +326,20 @@ export default function DualAudioPlayer({
                 </button>
               </div>
 
-              {/* Ambient Audio BGM Volume & Auto-Ducking Indicator */}
+              {/* Ambient Audio Volume & Ducking Indicator */}
               <div className="flex items-center space-x-4 w-full md:w-auto bg-slate-950/60 p-3 rounded-2xl border border-slate-800">
                 <button
                   onClick={() => setIsMuted(!isMuted)}
                   className="text-slate-400 hover:text-slate-200 transition"
-                  title={isMuted ? 'Bunyikan Ambient' : 'Bisukan Ambient'}
+                  title={isMuted ? 'Bunyikan Musik Latar' : 'Bisukan Musik Latar'}
                 >
                   {isMuted ? <VolumeX className="w-5 h-5 text-rose-400" /> : <Volume2 className="w-5 h-5 text-purple-400" />}
                 </button>
 
                 <div className="flex flex-col space-y-1 flex-1 md:w-36">
                   <div className="flex justify-between items-center text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
-                    <span>Volume Ambient</span>
-                    {isDucked && <span className="text-pink-400 animate-pulse">Auto-Ducking (0.15)</span>}
+                    <span>Musik Latar</span>
+                    {isDucked && <span className="text-pink-400 animate-pulse">Auto-Ducking</span>}
                   </div>
                   <input
                     type="range"
@@ -430,7 +367,7 @@ export default function DualAudioPlayer({
             <h3 className="text-lg font-bold text-slate-200">Daftar Alur Naskah</h3>
           </div>
           <span className="text-xs text-slate-400">
-            Klik segmen untuk langsung memutar audio
+            Klik segmen untuk langsung memutar audio dialog
           </span>
         </div>
 
@@ -443,7 +380,9 @@ export default function DualAudioPlayer({
                 ref={isActive ? activeSegmentRef : null}
                 onClick={() => {
                   setCurrentIndex(idx);
-                  if (!isPlaying) togglePlayPause();
+                  if (!isPlaying) {
+                    setIsPlaying(true);
+                  }
                 }}
                 className={`cursor-pointer p-4 rounded-2xl border transition duration-200 flex items-start space-x-4 ${
                   isActive
