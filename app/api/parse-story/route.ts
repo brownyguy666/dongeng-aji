@@ -23,7 +23,7 @@ interface ParsedStorySchema {
   segments: SegmentInput[];
 }
 
-// Maps character types to 100% verified Free-tier ElevenLabs Voice IDs
+// Maps character types to verified Free-tier ElevenLabs Voice IDs
 function getVoicePreset(genderOrType: string) {
   switch (genderOrType) {
     case 'female':
@@ -53,43 +53,45 @@ export async function POST(req: Request) {
     }
 
     const prompt = `Anda adalah Sutradara Sandiwara Radio Teatrikal Ahli (Audio Drama Director).
-Tugas Anda adalah membedah dan mentransformasikan naskah cerita menjadi naskah pertunjukan suara audio multi-karakter yang sangat hidup, presisi, dan kaya emosi untuk disuarakan oleh AI TTS.
+Tugas utama Anda adalah membedah, memecah, dan menyusun naskah cerita menjadi segmen-segmen audio pertunjukan multi-karakter yang sangat presisi, hidup, dan terpisah secara tegas antara Narasi dan Dialog Tokoh.
 
 Judul Cerita: ${title}
 
 Naskah Mentah:
 ${rawText}
 
-PETUNJUK PENYUTRADARAAN AUDIO DRAMA:
-1. PENGATURAN SUASANA (ambient_mood):
-   Pilih satu suasana latar yang paling mendominasi: forest_night, rainy_day, tavern_crowd, medieval_castle, atau calm_room.
+ATURAN WAJIB PENYUTRADARAAN AUDIO DRAMA:
 
-2. KARAKTERISASI TOKOH (Timbre, Usia & Peran):
-   Identifikasi setiap tokoh yang berbicara (serta "Narrator"). Klasifikasikan gender_or_type:
-   - 'narrator': Pencerita yang artikulatif dan berwibawa.
+1. PEMISAHAN TOTAL ANTARA NARASI DAN DIALOG TOKOH (SANGAT KRUSIAL):
+   - JANGAN PERNAH mencampurkan kalimat narasi (deskripsi suasana/tindakan) dengan kalimat langsung yang diucapkan tokoh dalam satu segmen yang sama.
+   - Setiap kali ada perpindahan dari narasi ke kalimat yang diucapkan tokoh (atau sebaliknya), Anda WAJIB memisahkannya menjadi segmen tersendiri secara berurutan.
+   - Kalimat langsung di dalam tanda petik ("...") atau setelah tanda titik dua (:) HARUS menjadi segmen khusus dengan 'speaker' nama tokoh tersebut (bukan Narrator).
+   - Teks sebelum atau sesudah dialog yang berupa penjelasan pencerita HARUS menjadi segmen terpisah dengan 'speaker': "Narrator".
+   
+   CONTOH PEMISAHAN YANG BENAR:
+   Naskah Asli:
+   'Di tengah malam yang dingin, Kakek mengelus pundak cucunya dan berbisik, "Jangan takut, semuanya akan baik-baik saja," lalu tersenyum hangat.'
+   
+   Hasil Pemecahan Segmen:
+   - Segmen 1 -> speaker: "Narrator", tone: "Deskriptif tenang", text: "Di tengah malam yang dingin, Kakek mengelus pundak cucunya dan berbisik,"
+   - Segmen 2 -> speaker: "Kakek", tone: "Bisik hangat dekat mik, menenangkan", text: "Hhh... Jangan takut, semuanya akan baik-baik saja."
+   - Segmen 3 -> speaker: "Narrator", tone: "Lembut hangat", text: "lalu tersenyum hangat."
+
+2. DAFTAR TOKOH & KLASIFIKASI (characters):
+   Daftarkan "Narrator" serta SEMUA tokoh yang memiliki dialog. Tentukan 'gender_or_type':
+   - 'narrator': Pencerita yang jelas dan berwibawa.
    - 'male': Tokoh pria dewasa.
    - 'female': Tokoh wanita/putri/ibu.
-   - 'elder_male': Tokoh pria tua/kakek/tetua yang suaranya berat dan berwibawa.
-   - 'child': Tokoh anak-anak yang ceria/polos.
+   - 'elder_male': Tokoh pria tua/kakek/tetua yang suaranya berat dan lambat.
+   - 'child': Tokoh anak-anak/bocah yang ceria atau polos.
 
-3. STRUKTUR SEGMEN & NADA EMOSI (tone):
-   Tuliskan arahan akting suara secara spesifik pada properti 'tone', misalnya:
-   - "Bisik rapat, jarak dekat mik, cemas"
-   - "Teriak panik, jarak agak jauh, tempo cepat"
-   - "Hangat berwibawa, tempo tenang"
-   - "Gemetar, isak tangis tertahan, napas berat"
+3. PENGATURAN SUASANA LATAR (ambient_mood):
+   Pilih salah satu: forest_night, rainy_day, tavern_crowd, medieval_castle, calm_room.
 
-4. PENYUSUNAN DIKSI, ARTIKULASI & VOKAL NON-VERBAL PADA 'text':
-   - HAPUS SEMUA tag instruksi panggung dalam kurung seperti "(berbisik)" atau "[tertawa]".
-   - Gantilah reaksi non-verbal menjadi bunyi fonetik alami yang dapat diucapkan langsung oleh AI:
-     * Tawa: "Hahaha...", "Hihihi...", "Heh..."
-     * Helahan napas/desah: "Hhh...", "Ah..."
-     * Gagap/keterkejutan: "A-aku...", "B-bagaimana...", "T-tunggu!"
-   - Gunakan ritme tanda baca dramatis untuk mengatur jeda hening dan ketukan tempo:
-     * Koma ',' untuk jeda napas antar frasa.
-     * Titik tiga '...' untuk jeda berpikir, keraguan, atau suspense.
-     * Tanda hubung ganda '--' untuk interupsi mendadak atau keterpatahan bicara.
-     * Tanda seru '!' untuk penekanan emosi tinggi atau ketegasan.`;
+4. EKSPRESI EMOSI, DIKSI & FONETIK ALAMI PADA 'text':
+   - Hilangkan semua tag dalam kurung seperti (berbisik), (tertawa), [kaget].
+   - Ubah reaksi non-verbal menjadi kata fonetik nyata: "Hahaha...", "Hhh...", "A-aku...", "T-tidak mungkin!".
+   - Sisipkan tanda jeda dramatis: koma ',', titik tiga '...' (jeda hening/suspense), tanda seru '!' (penekanan kuat).`;
 
     let parsedResult: ParsedStorySchema;
 
@@ -147,7 +149,7 @@ PETUNJUK PENYUTRADARAAN AUDIO DRAMA:
       const responseText = response.text || '';
       parsedResult = JSON.parse(responseText);
     } catch (geminiError: any) {
-      console.warn('Gemini API call failed or missing API key, using smart heuristic fallback parser:', geminiError?.message);
+      console.warn('Gemini API call notice, using smart heuristic fallback parser:', geminiError?.message);
 
       const lines = rawText
         .split('\n')
@@ -156,6 +158,7 @@ PETUNJUK PENYUTRADARAAN AUDIO DRAMA:
 
       const fallbackSegments: SegmentInput[] = [];
       const characterSet = new Set<string>();
+      characterSet.add('Narrator');
 
       lines.forEach((line: string, index: number) => {
         let speaker = 'Narrator';
