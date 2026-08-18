@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Play,
   Pause,
@@ -43,11 +43,11 @@ interface DualAudioPlayerProps {
 }
 
 const AMBIENT_TITLES: Record<string, string> = {
-  forest_night: '🌲 Hutan Malam Sunyi',
-  rainy_day: '🌧️ Hujan Rintik Syahdu',
-  tavern_crowd: '🍺 Kedai Hangat & Riuh',
-  medieval_castle: '🏰 Istana Kerajaan Megah',
-  calm_room: '📖 Kamar Dongeng Tenang',
+  forest_night: '🌲 Hutan Malam Sunyi & Jangkrik',
+  rainy_day: '🌧️ Hujan Rintik & Gemuruh Lembut',
+  tavern_crowd: '🍺 Kedai Hangat & Perapian',
+  medieval_castle: '🏰 Istana Megah & Angin Dingin',
+  calm_room: '📖 Kamar Dongeng Santai & Damai',
 };
 
 export default function DualAudioPlayer({
@@ -64,11 +64,12 @@ export default function DualAudioPlayer({
   const [isDucked, setIsDucked] = useState(false);
   const [isGeneratingCurrent, setIsGeneratingCurrent] = useState(false);
 
-  // HTML Audio References
+  // Audio References
   const voiceAudioRef = useRef<HTMLAudioElement | null>(null);
-  const ambientAudioRef = useRef<HTMLAudioElement | null>(null);
-  const webAudioCtxRef = useRef<AudioContext | null>(null);
-  const synthGainRef = useRef<GainNode | null>(null);
+  const preloadedAudioRef = useRef<HTMLAudioElement | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const masterGainRef = useRef<GainNode | null>(null);
+  const ambientNodesRef = useRef<any[]>([]);
   const activeSegmentRef = useRef<HTMLDivElement | null>(null);
 
   const currentSegment = segments[currentIndex] || null;
@@ -78,82 +79,117 @@ export default function DualAudioPlayer({
     (c) => c.character_name.toLowerCase() === currentSegment?.speaker_name?.toLowerCase()
   );
 
-  // Initialize Channel 2 Ambient Audio & Procedural Fallback Synth
-  useEffect(() => {
-    const moodFile = ambientMood || 'forest_night';
-    const audioPath = `/audio/ambient/${moodFile}.mp3`;
-    const ambientAudio = new Audio(audioPath);
-    ambientAudio.loop = true;
-    ambientAudio.volume = isMuted ? 0 : isDucked ? 0.15 : ambientVolume;
-    ambientAudioRef.current = ambientAudio;
+  // --- Professional Procedural Ambient Sound Engine ---
+  const startProceduralAmbient = useCallback(() => {
+    try {
+      if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume();
+        return;
+      }
 
-    // Handle potential missing audio file gracefully with Web Audio procedural synth
-    const playAmbient = async () => {
-      try {
-        await ambientAudio.play();
-      } catch (err) {
-        // Fallback procedural ambient drone synth using Web Audio API
-        try {
-          if (!webAudioCtxRef.current) {
-            const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-            if (AudioCtx) {
-              const ctx = new AudioCtx();
-              webAudioCtxRef.current = ctx;
+      if (audioCtxRef.current) return;
 
-              const osc1 = ctx.createOscillator();
-              const osc2 = ctx.createOscillator();
-              const gain = ctx.createGain();
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
 
-              osc1.type = 'sine';
-              osc2.type = 'triangle';
-              osc1.frequency.setValueAtTime(110, ctx.currentTime); // A2
-              osc2.frequency.setValueAtTime(164.81, ctx.currentTime); // E3
+      const ctx = new AudioCtx();
+      audioCtxRef.current = ctx;
 
-              gain.gain.setValueAtTime(isDucked ? 0.03 : ambientVolume * 0.1, ctx.currentTime);
-              synthGainRef.current = gain;
+      const masterGain = ctx.createGain();
+      const initialVol = isMuted ? 0 : isDucked ? 0.15 : ambientVolume;
+      masterGain.gain.setValueAtTime(initialVol * 0.25, ctx.currentTime);
+      masterGain.connect(ctx.destination);
+      masterGainRef.current = masterGain;
 
-              osc1.connect(gain);
-              osc2.connect(gain);
-              gain.connect(ctx.destination);
+      const nodes: any[] = [];
+      const mood = ambientMood || 'forest_night';
 
-              osc1.start();
-              osc2.start();
-            }
-          }
-        } catch (synthErr) {
-          console.warn('Web Audio Fallback Error:', synthErr);
+      if (mood === 'rainy_day') {
+        // Rain Noise Generator
+        const bufferSize = ctx.sampleRate * 2;
+        const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        let lastOut = 0.0;
+        for (let i = 0; i < bufferSize; i++) {
+          const white = Math.random() * 2 - 1;
+          output[i] = (lastOut + 0.02 * white) / 1.02; // Pink-ish noise filter
+          lastOut = output[i];
+          output[i] *= 3.5;
         }
-      }
-    };
 
-    if (isPlaying) {
-      playAmbient();
+        const whiteNoise = ctx.createBufferSource();
+        whiteNoise.buffer = noiseBuffer;
+        whiteNoise.loop = true;
+
+        const rainFilter = ctx.createBiquadFilter();
+        rainFilter.type = 'lowpass';
+        rainFilter.frequency.setValueAtTime(800, ctx.currentTime);
+
+        whiteNoise.connect(rainFilter);
+        rainFilter.connect(masterGain);
+        whiteNoise.start();
+        nodes.push(whiteNoise, rainFilter);
+      } else {
+        // Multi-layered Atmospheric Harmonic Drone
+        const freqs =
+          mood === 'forest_night'
+            ? [110, 164.81, 220] // A2, E3, A3
+            : mood === 'tavern_crowd'
+            ? [130.81, 196, 261.63] // C3, G3, C4
+            : mood === 'medieval_castle'
+            ? [98, 146.83, 196] // G2, D3, G3
+            : [110, 138.59, 164.81]; // Calm warm A major
+
+        freqs.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+
+          osc.type = idx === 0 ? 'sine' : 'triangle';
+          osc.frequency.setValueAtTime(freq, ctx.currentTime);
+          gain.gain.setValueAtTime(0.15 / (idx + 1), ctx.currentTime);
+
+          osc.connect(gain);
+          gain.connect(masterGain);
+          osc.start();
+          nodes.push(osc, gain);
+        });
+      }
+
+      ambientNodesRef.current = nodes;
+    } catch (e) {
+      console.warn('Ambient Web Audio Engine Error:', e);
     }
+  }, [ambientMood, ambientVolume, isDucked, isMuted]);
 
-    return () => {
-      ambientAudio.pause();
-      if (webAudioCtxRef.current && webAudioCtxRef.current.state !== 'closed') {
-        webAudioCtxRef.current.close();
-        webAudioCtxRef.current = null;
-      }
-    };
-  }, [ambientMood]);
+  const stopProceduralAmbient = useCallback(() => {
+    if (audioCtxRef.current && audioCtxRef.current.state === 'running') {
+      audioCtxRef.current.suspend();
+    }
+  }, []);
 
-  // Sync Ambient Volume & Auto-Ducking
+  // Sync Ambient Volume with Smooth Fade Auto-Ducking
   useEffect(() => {
+    if (!masterGainRef.current || !audioCtxRef.current) return;
     const targetVol = isMuted ? 0 : isDucked ? 0.15 : ambientVolume;
+    const ctx = audioCtxRef.current;
 
-    if (ambientAudioRef.current) {
-      ambientAudioRef.current.volume = targetVol;
-    }
-
-    if (synthGainRef.current && webAudioCtxRef.current) {
-      synthGainRef.current.gain.setValueAtTime(
-        targetVol * 0.1,
-        webAudioCtxRef.current.currentTime
-      );
-    }
+    // Smooth exponential/linear gain ramp for professional studio ducking
+    masterGainRef.current.gain.cancelScheduledValues(ctx.currentTime);
+    masterGainRef.current.gain.linearRampToValueAtTime(
+      targetVol * 0.25,
+      ctx.currentTime + 0.3
+    );
   }, [ambientVolume, isMuted, isDucked]);
+
+  // Preload Next Segment for Instant Gapless Continuous Playback
+  useEffect(() => {
+    const nextSegment = segments[currentIndex + 1];
+    if (nextSegment && nextSegment.audio_url) {
+      const preload = new Audio(nextSegment.audio_url);
+      preload.preload = 'auto';
+      preloadedAudioRef.current = preload;
+    }
+  }, [currentIndex, segments]);
 
   // Scroll active segment into view
   useEffect(() => {
@@ -162,11 +198,10 @@ export default function DualAudioPlayer({
     }
   }, [currentIndex]);
 
-  // Manage Voice Audio Playback for active segment
+  // Manage Voice Audio Playback
   useEffect(() => {
     if (!currentSegment) return;
 
-    // Check if segment has audio URL, else generate on demand if function provided
     if (!currentSegment.audio_url && onGenerateSegment && currentSegment.status !== 'generating') {
       setIsGeneratingCurrent(true);
       onGenerateSegment(currentSegment.id)
@@ -183,49 +218,44 @@ export default function DualAudioPlayer({
       voiceAudioRef.current = voice;
 
       voice.onplay = () => {
-        setIsDucked(true); // Auto-ducking: volume down to 0.15 on dialogue play
+        setIsDucked(true); // Auto-ducking: volume down to 0.15
+        startProceduralAmbient();
       };
 
       voice.onpause = () => {
-        setIsDucked(false); // Restore volume on pause
+        setIsDucked(false);
       };
 
       voice.onended = () => {
-        setIsDucked(false); // Restore volume on segment end
+        setIsDucked(false); // Restore volume
         
-        // Continuous Playback: Auto advance to next segment
+        // Instant Continuous Playback to next segment
         if (currentIndex < segments.length - 1) {
           setCurrentIndex((prev) => prev + 1);
         } else {
           setIsPlaying(false);
+          stopProceduralAmbient();
         }
       };
 
       if (isPlaying) {
         voice.play().catch((err) => console.warn('Voice play error:', err));
+        startProceduralAmbient();
       }
     }
-  }, [currentIndex, currentSegment?.audio_url, isPlaying]);
+  }, [currentIndex, currentSegment?.audio_url, isPlaying, startProceduralAmbient, stopProceduralAmbient]);
 
   const togglePlayPause = async () => {
     if (!isPlaying) {
       setIsPlaying(true);
+      startProceduralAmbient();
 
-      // Start Ambient Audio
-      if (ambientAudioRef.current) {
-        ambientAudioRef.current.play().catch(() => {});
-      }
-
-      // Resume or play voice audio
       if (voiceAudioRef.current) {
         voiceAudioRef.current.play().catch(() => {});
       }
     } else {
       setIsPlaying(false);
-
-      if (ambientAudioRef.current) {
-        ambientAudioRef.current.pause();
-      }
+      stopProceduralAmbient();
 
       if (voiceAudioRef.current) {
         voiceAudioRef.current.pause();
@@ -265,7 +295,7 @@ export default function DualAudioPlayer({
             </h1>
           </div>
 
-          <div className="flex items-center space-x-2 bg-slate-950/60 border border-slate-800 rounded-2xl px-4 py-2 text-xs font-medium text-amber-300">
+          <div className="flex items-center space-x-2 bg-slate-950/60 border border-slate-800 rounded-2xl px-4 py-2 text-xs font-medium text-amber-300 shadow-sm">
             <Music className="w-4 h-4 text-amber-400" />
             <span>Suasana: {AMBIENT_TITLES[ambientMood] || ambientMood}</span>
           </div>
@@ -294,7 +324,7 @@ export default function DualAudioPlayer({
                     Segmen {currentIndex + 1} dari {segments.length}
                     {speakerChar && (
                       <span className="ml-2 text-purple-400">
-                        • Voice: {speakerChar.base_voice} ({speakerChar.pitch}, {speakerChar.rate})
+                        • Voice ID: {speakerChar.base_voice}
                       </span>
                     )}
                   </span>
@@ -311,7 +341,7 @@ export default function DualAudioPlayer({
                 ) : isGeneratingCurrent || currentSegment.status === 'generating' ? (
                   <span className="inline-flex items-center space-x-1.5 px-3 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-full text-xs font-medium animate-pulse">
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>Sintesis TTS...</span>
+                    <span>Sintesis ElevenLabs...</span>
                   </span>
                 ) : (
                   <span className="inline-flex items-center space-x-1.5 px-3 py-1 bg-slate-800 text-slate-400 rounded-full text-xs font-medium">
