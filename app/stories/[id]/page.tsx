@@ -4,7 +4,7 @@ import React, { useEffect, useState, use, useRef } from 'react';
 import Link from 'next/link';
 import DualAudioPlayer, { CharacterInfo, SegmentInfo } from '@/components/DualAudioPlayer';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Loader2, Sparkles, RefreshCw, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Loader2, Sparkles, RefreshCw, AlertCircle, Trash2 } from 'lucide-react';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -20,6 +20,7 @@ export default function StoryDetailPage({ params }: PageProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [generatingCount, setGeneratingCount] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const isGeneratingRef = useRef(false);
 
@@ -64,6 +65,32 @@ export default function StoryDetailPage({ params }: PageProps) {
       setError(err?.message || 'Gagal memuat data cerita');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteStory = async () => {
+    if (!confirm('Apakah kamu yakin ingin menghapus cerita ini beserta semua data dan file audionya?')) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const res = await fetch('/api/delete-story', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storyId }),
+      });
+
+      if (res.ok) {
+        window.location.href = '/';
+      } else {
+        alert('Gagal menghapus cerita.');
+        setIsDeleting(false);
+      }
+    } catch (err) {
+      console.error('Delete error:', err);
+      alert('Terjadi kesalahan saat menghapus cerita.');
+      setIsDeleting(false);
     }
   };
 
@@ -130,7 +157,7 @@ export default function StoryDetailPage({ params }: PageProps) {
     const runParallelPipeline = async () => {
       setGeneratingCount(pendingSegments.length);
 
-      // Concurrent queue with concurrency of 2 workers
+      // Concurrency pool with 2 workers
       const concurrency = 2;
       const queue = [...pendingSegments];
 
@@ -220,6 +247,19 @@ export default function StoryDetailPage({ params }: PageProps) {
             title="Muat Ulang Data"
           >
             <RefreshCw className="w-4 h-4" />
+          </button>
+
+          <button
+            onClick={handleDeleteStory}
+            disabled={isDeleting}
+            className="p-2 bg-slate-900 border border-slate-800 hover:border-rose-500/50 hover:bg-rose-500/10 rounded-xl text-slate-400 hover:text-rose-400 transition"
+            title="Hapus Cerita Ini"
+          >
+            {isDeleting ? (
+              <Loader2 className="w-4 h-4 animate-spin text-rose-400" />
+            ) : (
+              <Trash2 className="w-4 h-4" />
+            )}
           </button>
         </div>
       </header>
