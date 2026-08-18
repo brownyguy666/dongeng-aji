@@ -52,24 +52,44 @@ export async function POST(req: Request) {
       );
     }
 
-    const prompt = `Analisis naskah cerita berikut dan ekstrak struktur dramatisnya secara presisi dan ekspresif:
-Judul: ${title}
+    const prompt = `Anda adalah Sutradara Sandiwara Radio Teatrikal Ahli (Audio Drama Director).
+Tugas Anda adalah membedah dan mentransformasikan naskah cerita menjadi naskah pertunjukan suara audio multi-karakter yang sangat hidup, presisi, dan kaya emosi untuk disuarakan oleh AI TTS.
 
-Naskah:
+Judul Cerita: ${title}
+
+Naskah Mentah:
 ${rawText}
 
-Tugas:
-1. Tentukan ambient_mood yang paling sesuai (pilihan persis: forest_night, rainy_day, tavern_crowd, medieval_castle, calm_room).
-2. Daftarkan seluruh tokoh/karakter yang berbicara (termasuk "Narrator" jika ada narasi). Tentukan gender_or_type untuk tiap tokoh dari pilihan: male, female, elder_male, child, narrator.
-3. Bagi naskah menjadi segmen-segmen dialog/narasi berurutan (sequence order mulai dari 1).
-4. SANGAT PENTING - Penyusunan Tanda Baca Dramatis untuk TTS:
-   - Pindahkan/hapus semua tag petunjuk emosi dalam kurung seperti "(berbisik)" atau "[gembira]" dari teks dialog 'text'.
-   - Perbaiki dan susun 'text' dialog dengan tanda baca dramatis yang tepat sesuai emosi adegan:
-     * Gunakan elipsis '...' untuk jeda emosional, kecemasan, atau tahan napas.
-     * Gunakan tanda seru '!' untuk penekanan nada keras, kejutan, atau kemarahan.
-     * Gunakan tanda hubung '--' untuk perhentian kalimat mendadak atau keraguan.
-     * Gunakan koma ',' untuk ritme jeda napas yang alami.
-   Hal ini sangat penting agar sintesis suara ElevenLabs menghasilkan intonasi dan penekanan ekspresi yang murni, ekspresif, dan tidak datar.`;
+PETUNJUK PENYUTRADARAAN AUDIO DRAMA:
+1. PENGATURAN SUASANA (ambient_mood):
+   Pilih satu suasana latar yang paling mendominasi: forest_night, rainy_day, tavern_crowd, medieval_castle, atau calm_room.
+
+2. KARAKTERISASI TOKOH (Timbre, Usia & Peran):
+   Identifikasi setiap tokoh yang berbicara (serta "Narrator"). Klasifikasikan gender_or_type:
+   - 'narrator': Pencerita yang artikulatif dan berwibawa.
+   - 'male': Tokoh pria dewasa.
+   - 'female': Tokoh wanita/putri/ibu.
+   - 'elder_male': Tokoh pria tua/kakek/tetua yang suaranya berat dan berwibawa.
+   - 'child': Tokoh anak-anak yang ceria/polos.
+
+3. STRUKTUR SEGMEN & NADA EMOSI (tone):
+   Tuliskan arahan akting suara secara spesifik pada properti 'tone', misalnya:
+   - "Bisik rapat, jarak dekat mik, cemas"
+   - "Teriak panik, jarak agak jauh, tempo cepat"
+   - "Hangat berwibawa, tempo tenang"
+   - "Gemetar, isak tangis tertahan, napas berat"
+
+4. PENYUSUNAN DIKSI, ARTIKULASI & VOKAL NON-VERBAL PADA 'text':
+   - HAPUS SEMUA tag instruksi panggung dalam kurung seperti "(berbisik)" atau "[tertawa]".
+   - Gantilah reaksi non-verbal menjadi bunyi fonetik alami yang dapat diucapkan langsung oleh AI:
+     * Tawa: "Hahaha...", "Hihihi...", "Heh..."
+     * Helahan napas/desah: "Hhh...", "Ah..."
+     * Gagap/keterkejutan: "A-aku...", "B-bagaimana...", "T-tunggu!"
+   - Gunakan ritme tanda baca dramatis untuk mengatur jeda hening dan ketukan tempo:
+     * Koma ',' untuk jeda napas antar frasa.
+     * Titik tiga '...' untuk jeda berpikir, keraguan, atau suspense.
+     * Tanda hubung ganda '--' untuk interupsi mendadak atau keterpatahan bicara.
+     * Tanda seru '!' untuk penekanan emosi tinggi atau ketegasan.`;
 
     let parsedResult: ParsedStorySchema;
 
