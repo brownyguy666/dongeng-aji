@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import ScriptUploader from '@/components/ScriptUploader';
 import { supabase } from '@/lib/supabase';
-import { Sparkles, BookOpen, PlusCircle, Volume2, ArrowRight, PlayCircle, Loader2 } from 'lucide-react';
+import { Sparkles, BookOpen, PlusCircle, Volume2, ArrowRight, PlayCircle, Loader2, Trash2 } from 'lucide-react';
 
 interface StorySummary {
   id: string;
@@ -17,6 +17,7 @@ export default function HomePage() {
   const [stories, setStories] = useState<StorySummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [showUploader, setShowUploader] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchStories = async () => {
     setLoading(true);
@@ -33,6 +34,35 @@ export default function HomePage() {
       console.warn('Error fetching stories:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteStory = async (e: React.MouseEvent, storyId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!confirm('Apakah kamu yakin ingin menghapus cerita ini beserta semua file audionya?')) {
+      return;
+    }
+
+    setDeletingId(storyId);
+    try {
+      const res = await fetch('/api/delete-story', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storyId }),
+      });
+
+      if (res.ok) {
+        setStories((prev) => prev.filter((s) => s.id !== storyId));
+      } else {
+        alert('Gagal menghapus cerita.');
+      }
+    } catch (err) {
+      console.error('Delete error:', err);
+      alert('Terjadi kesalahan saat menghapus cerita.');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -58,7 +88,7 @@ export default function HomePage() {
               Storyteller AI
             </span>
             <span className="block text-[10px] uppercase font-semibold text-slate-400 tracking-wider">
-              Interactive Story Synthesis Platform
+              Theatrical Radio Drama Synthesis Platform
             </span>
           </div>
         </div>
@@ -78,15 +108,15 @@ export default function HomePage() {
           <div className="text-center space-y-6 max-w-3xl mx-auto pt-6">
             <div className="inline-flex items-center space-x-2 px-4 py-1.5 bg-purple-500/10 border border-purple-500/20 rounded-full text-xs font-semibold text-purple-300">
               <Volume2 className="w-4 h-4 text-purple-400 animate-pulse" />
-              <span>Multi-Character Voice Synthesis & Ambient Auto-Ducking</span>
+              <span>Theatrical AI Voice Synthesis & Procedural Ambient Soundscapes</span>
             </div>
 
             <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-tight bg-gradient-to-r from-white via-slate-200 to-purple-200 bg-clip-text text-transparent">
-              Ubah Naskah Cerita Jadi Sandiwara Radio AI
+              Ubah Naskah Menjadi Sandiwara Radio AI Teatrikal
             </h1>
 
             <p className="text-base md:text-lg text-slate-400 leading-relaxed">
-              Otomatis mengekstrak tokoh, nada bicara, dan latar suasana dari dokumen naskah. Sintesis suara gratis multi-karakter dengan musik latar ambient yang cerdas.
+              Penyutradaraan otomatis dengan karakterisasi suara, artikulasi vokal non-verbal, jeda dramatis, dan musik latar ambient interaktif.
             </p>
 
             <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
@@ -95,7 +125,7 @@ export default function HomePage() {
                 className="px-8 py-4 bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:from-purple-500 hover:to-amber-400 text-white font-bold rounded-2xl shadow-xl shadow-purple-600/30 hover:scale-105 transition duration-200 flex items-center space-x-2 text-base"
               >
                 <Sparkles className="w-5 h-5" />
-                <span>Mulai Buat Cerita Baru</span>
+                <span>Mulai Buat Cerita Teatrikal</span>
               </button>
             </div>
           </div>
@@ -130,7 +160,7 @@ export default function HomePage() {
               </div>
               <h3 className="text-lg font-bold text-slate-300">Belum ada cerita yang dibuat</h3>
               <p className="text-sm text-slate-500 max-w-md mx-auto">
-                Klik tombol "Buat Cerita Baru" untuk mengunggah naskah dan mengubahnya menjadi petualangan audio interaktif.
+                Klik tombol "Buat Cerita Baru" untuk mengunggah naskah dan mengubahnya menjadi pertunjukan audio teatrikal.
               </p>
               <button
                 onClick={() => setShowUploader(true)}
@@ -142,33 +172,51 @@ export default function HomePage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {stories.map((story) => (
-                <Link
+                <div
                   key={story.id}
-                  href={`/stories/${story.id}`}
-                  className="group block p-6 bg-slate-900/80 hover:bg-slate-900 backdrop-blur-xl border border-slate-800 hover:border-purple-500/50 rounded-3xl transition duration-300 shadow-lg shadow-purple-950/10 hover:shadow-purple-950/30 flex flex-col justify-between"
+                  className="group relative p-6 bg-slate-900/80 hover:bg-slate-900 backdrop-blur-xl border border-slate-800 hover:border-purple-500/50 rounded-3xl transition duration-300 shadow-lg shadow-purple-950/10 hover:shadow-purple-950/30 flex flex-col justify-between"
                 >
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="px-3 py-1 bg-purple-500/10 border border-purple-500/20 text-purple-300 rounded-full text-xs font-semibold">
                         {story.ambient_mood || 'Forest Night'}
                       </span>
-                      <span className="text-[11px] text-slate-500">
-                        {new Date(story.created_at).toLocaleDateString('id-ID')}
-                      </span>
+                      
+                      <button
+                        onClick={(e) => handleDeleteStory(e, story.id)}
+                        disabled={deletingId === story.id}
+                        className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition"
+                        title="Hapus Cerita & Audio"
+                      >
+                        {deletingId === story.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin text-rose-400" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
+                      </button>
                     </div>
-                    <h3 className="text-lg font-bold text-slate-100 group-hover:text-purple-300 transition line-clamp-2">
-                      {story.title}
-                    </h3>
+
+                    <Link href={`/stories/${story.id}`} className="block">
+                      <h3 className="text-lg font-bold text-slate-100 group-hover:text-purple-300 transition line-clamp-2">
+                        {story.title}
+                      </h3>
+                      <span className="block mt-1 text-[11px] text-slate-500">
+                        Dibuat: {new Date(story.created_at).toLocaleDateString('id-ID')}
+                      </span>
+                    </Link>
                   </div>
 
-                  <div className="pt-6 flex items-center justify-between text-sm font-semibold text-purple-400 group-hover:text-purple-300 transition">
+                  <Link
+                    href={`/stories/${story.id}`}
+                    className="pt-6 flex items-center justify-between text-sm font-semibold text-purple-400 group-hover:text-purple-300 transition"
+                  >
                     <span className="flex items-center space-x-1.5">
                       <PlayCircle className="w-4 h-4" />
                       <span>Putar Sandiwara Audio</span>
                     </span>
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition transform" />
-                  </div>
-                </Link>
+                  </Link>
+                </div>
               ))}
             </div>
           )}
