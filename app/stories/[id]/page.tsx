@@ -220,8 +220,8 @@ export default function StoryDetailPage({ params }: PageProps) {
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 selection:bg-purple-500 selection:text-white relative overflow-hidden pb-16">
       {/* Background Aesthetic Lighting */}
-      <div className="absolute top-0 right-1/4 w-[800px] h-[400px] bg-purple-900/20 blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 left-1/4 w-[800px] h-[400px] bg-pink-900/15 blur-3xl pointer-events-none" />
+      <div className="absolute top-0 right-1/4 w-200 h-100 bg-purple-900/20 blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 left-1/4 w-200 h-100 bg-pink-900/15 blur-3xl pointer-events-none" />
 
       {/* Top Header */}
       <header className="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between relative z-10 border-b border-slate-800/60">
