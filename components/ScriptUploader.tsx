@@ -137,7 +137,7 @@ export default function ScriptUploader({ onSuccess }: ScriptUploaderProps) {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Contoh: Petualangan Kancil & Sang Serigala Bijak"
-            className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 transition"
+            className="story-input"
             disabled={loading}
           />
         </div>
@@ -198,7 +198,7 @@ export default function ScriptUploader({ onSuccess }: ScriptUploaderProps) {
             value={rawText}
             onChange={(e) => setRawText(e.target.value)}
             placeholder="Tulis atau tempel naskah cerita di sini...&#10;Contoh format:&#10;Narrator: Di sebuah rimba tua yang rindang, malam merayap pelan.&#10;Sang Kancil: Wahai Serigala, maukah engkau mendengarkan dongeng bintang?&#10;Serigala: (Berbisik) Katakan, sahabatku..."
-            className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 transition font-mono text-sm leading-relaxed"
+            className="story-input font-mono text-sm leading-relaxed"
             disabled={loading}
           />
         </div>
