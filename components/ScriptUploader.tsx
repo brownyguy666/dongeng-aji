@@ -1,55 +1,54 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import mammoth from 'mammoth';
-import { Upload, FileText, Sparkles, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Upload, FileText, Sparkles, Loader2, AlertCircle } from 'lucide-react';
 
 interface ScriptUploaderProps {
   onSuccess?: (storyId: string) => void;
 }
 
 export default function ScriptUploader({ onSuccess }: ScriptUploaderProps) {
+  const router = useRouter();
   const [title, setTitle] = useState('');
   const [rawText, setRawText] = useState('');
-  const [fileName, setFileName] = useState<string | null>(null);
+  const [fileName, setFileName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [statusMessage, setStatusMessage] = useState('');
-  const [error, setError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const processFile = async (file: File) => {
     setError(null);
     setFileName(file.name);
-    
-    // Auto populate title if title field is empty
+
     if (!title) {
-      const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
-      setTitle(cleanName);
+      const baseName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+      setTitle(baseName);
     }
 
     try {
       if (file.name.endsWith('.docx')) {
-        setStatusMessage('Membaca berkas Word (.docx)...');
         const arrayBuffer = await file.arrayBuffer();
         const result = await mammoth.extractRawText({ arrayBuffer });
         setRawText(result.value);
-        setStatusMessage('Berkas .docx berhasil dibaca.');
       } else if (file.name.endsWith('.txt')) {
-        setStatusMessage('Membaca berkas teks (.txt)...');
         const text = await file.text();
         setRawText(text);
-        setStatusMessage('Berkas .txt berhasil dibaca.');
       } else {
-        setError('Format berkas tidak didukung. Harap gunakan .docx atau .txt');
+        throw new Error('Format file tidak didukung. Harap unggah file .docx atau .txt');
       }
-    } catch (err: any) {
-      setError(`Gagal membaca berkas: ${err?.message || 'Format tidak valid'}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Gagal membaca isi file dokumen.';
+      setError(msg);
     }
   };
 
-  const handleFileDrop = (e: React.DragEvent) => {
+  const handleFileDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragOver(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
@@ -59,53 +58,54 @@ export default function ScriptUploader({ onSuccess }: ScriptUploaderProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !rawText.trim()) {
-      setError('Judul cerita dan naskah wajib diisi.');
+    if (!title.trim()) {
+      setError('Judul cerita wajib diisi.');
+      return;
+    }
+    if (!rawText.trim()) {
+      setError('Isi naskah cerita tidak boleh kosong.');
       return;
     }
 
-    setLoading(true);
     setError(null);
-    setProgress(15);
-    setStatusMessage('Mengirim naskah ke Gemini API untuk ekstraksi karakter & segmen...');
+    setLoading(true);
+    setProgress(20);
+    setStatusMessage('Membedah karakter dan struktur naskah...');
 
     try {
-      const progressTimer = setInterval(() => {
-        setProgress((prev) => (prev < 90 ? prev + 10 : prev));
-      }, 500);
+      setProgress(50);
+      setStatusMessage('Menghubungi Gemini 2.5 Flash untuk analisis sandiwara radio...');
 
-      const res = await fetch('/api/parse-story', {
+      const response = await fetch('/api/parse-story', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, rawText }),
       });
 
-      clearInterval(progressTimer);
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Gagal memproses naskah cerita.');
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || `Server returned ${response.status}`);
       }
 
+      const data = await response.json();
       setProgress(100);
-      setStatusMessage(`Berhasil! ${data.segmentsCount} segmen telah diparsing.`);
+      setStatusMessage('Analisis selesai! Menyiapkan panggung cerita...');
 
-      setTimeout(() => {
-        if (onSuccess) {
-          onSuccess(data.storyId);
-        } else {
-          window.location.href = `/stories/${data.storyId}`;
-        }
-      }, 800);
-    } catch (err: any) {
-      setError(err?.message || 'Terjadi kesalahan saat memproses naskah.');
+      if (onSuccess) {
+        onSuccess(data.storyId);
+      } else {
+        router.push(`/stories/${data.storyId}`);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Gagal memproses naskah cerita.';
+      setError(msg);
       setLoading(false);
       setProgress(0);
     }
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl shadow-purple-950/20 text-slate-100">
+    <div className="w-full max-w-3xl mx-auto bg-slate-900/90 backdrop-blur-xl border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl shadow-purple-950/20 text-slate-100">
       <div className="flex items-center space-x-3 mb-6">
         <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-2xl text-purple-400">
           <Sparkles className="w-6 h-6" />
@@ -137,7 +137,7 @@ export default function ScriptUploader({ onSuccess }: ScriptUploaderProps) {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Contoh: Petualangan Kancil & Sang Serigala Bijak"
-            className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition"
+            className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-xl text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition"
             disabled={loading}
           />
         </div>
@@ -197,12 +197,8 @@ export default function ScriptUploader({ onSuccess }: ScriptUploaderProps) {
             rows={7}
             value={rawText}
             onChange={(e) => setRawText(e.target.value)}
-            placeholder="Tulis atau tempel naskah cerita di sini...
-Contoh format:
-Narrator: Di sebuah rimba tua yang rindang, malam merayap pelan.
-Sang Kancil: Wahai Serigala, maukah engkau mendengarkan dongeng bintang?
-Serigala: (Berbisik) Katakan, sahabatku..."
-            className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition font-mono text-sm leading-relaxed"
+            placeholder="Tulis atau tempel naskah cerita di sini...&#10;Contoh format:&#10;Narrator: Di sebuah rimba tua yang rindang, malam merayap pelan.&#10;Sang Kancil: Wahai Serigala, maukah engkau mendengarkan dongeng bintang?&#10;Serigala: (Berbisik) Katakan, sahabatku..."
+            className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-xl text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition font-mono text-sm leading-relaxed"
             disabled={loading}
           />
         </div>
