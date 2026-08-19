@@ -173,10 +173,11 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ audioUrl: publicUrl });
-  } catch (error: any) {
+  } catch (error) {
+    const errMessage = error instanceof Error ? error.message : 'Gagal membuat sintesis audio segmen.';
     console.error('Generate Segment API Error:', error);
     return NextResponse.json(
-      { error: error?.message || 'Gagal membuat sintesis audio segmen.' },
+      { error: errMessage },
       { status: 500 }
     );
   }
