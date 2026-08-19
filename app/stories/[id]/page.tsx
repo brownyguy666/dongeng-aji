@@ -1,16 +1,18 @@
 'use client';
 
-import React, { useEffect, useState, use, useRef } from 'react';
+import React, { useEffect, useState, use, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import DualAudioPlayer, { CharacterInfo, SegmentInfo } from '@/components/DualAudioPlayer';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Loader2, Sparkles, RefreshCw, AlertCircle, Trash2 } from 'lucide-react';
+import { ArrowLeft, Loader2, RefreshCw, AlertCircle, Trash2 } from 'lucide-react';
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
 export default function StoryDetailPage({ params }: PageProps) {
+  const router = useRouter();
   const resolvedParams = use(params);
   const storyId = resolvedParams.id;
 
@@ -25,7 +27,7 @@ export default function StoryDetailPage({ params }: PageProps) {
   const isGeneratingRef = useRef(false);
 
   // Fetch story data from Supabase
-  const loadStoryData = async () => {
+  const loadStoryData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -61,12 +63,13 @@ export default function StoryDetailPage({ params }: PageProps) {
       }
 
       setSegments((segData as SegmentInfo[]) || []);
-    } catch (err: any) {
-      setError(err?.message || 'Gagal memuat data cerita');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Gagal memuat data cerita';
+      setError(msg);
     } finally {
       setLoading(false);
     }
-  };
+  }, [storyId]);
 
   const handleDeleteStory = async () => {
     if (!confirm('Apakah kamu yakin ingin menghapus cerita ini beserta semua data dan file audionya?')) {
@@ -82,7 +85,7 @@ export default function StoryDetailPage({ params }: PageProps) {
       });
 
       if (res.ok) {
-        window.location.href = '/';
+        router.push('/');
       } else {
         alert('Gagal menghapus cerita.');
         setIsDeleting(false);
@@ -98,7 +101,7 @@ export default function StoryDetailPage({ params }: PageProps) {
     if (storyId) {
       loadStoryData();
     }
-  }, [storyId]);
+  }, [storyId, loadStoryData]);
 
   // High-Efficiency Concurrent & Priority Audio Generation Pipeline
   useEffect(() => {
@@ -184,10 +187,10 @@ export default function StoryDetailPage({ params }: PageProps) {
       isSubscribed = false;
       isGeneratingRef.current = false;
     };
-  }, [segments.length]);
+  }, [segments]);
 
   // Single segment generation trigger callback
-  const handleGenerateSegment = async (segmentId: string): Promise<string | null> => {
+  const handleGenerateSegment = useCallback(async (segmentId: string): Promise<string | null> => {
     try {
       setSegments((prev) =>
         prev.map((s) => (s.id === segmentId ? { ...s, status: 'generating' } : s))
@@ -215,7 +218,7 @@ export default function StoryDetailPage({ params }: PageProps) {
       console.error('Manual generate segment error:', err);
       return null;
     }
-  };
+  }, []);
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 selection:bg-purple-500 selection:text-white relative overflow-hidden pb-16">
