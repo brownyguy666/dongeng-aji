@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import ScriptUploader from '@/components/ScriptUploader';
 import { supabase } from '@/lib/supabase';
 import { Sparkles, BookOpen, PlusCircle, Volume2, ArrowRight, PlayCircle, Loader2, Trash2 } from 'lucide-react';
@@ -14,13 +15,13 @@ interface StorySummary {
 }
 
 export default function HomePage() {
+  const router = useRouter();
   const [stories, setStories] = useState<StorySummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [showUploader, setShowUploader] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const fetchStories = async () => {
-    setLoading(true);
+  const fetchStories = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('stories')
@@ -35,7 +36,7 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const handleDeleteStory = async (e: React.MouseEvent, storyId: string) => {
     e.preventDefault();
@@ -67,7 +68,30 @@ export default function HomePage() {
   };
 
   useEffect(() => {
-    fetchStories();
+    let active = true;
+    const load = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('stories')
+          .select('id, title, ambient_mood, created_at')
+          .order('created_at', { ascending: false });
+
+        if (active && data && !error) {
+          setStories(data as StorySummary[]);
+        }
+      } catch (err) {
+        console.warn('Error fetching stories:', err);
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    load();
+    return () => {
+      active = false;
+    };
   }, []);
 
   return (
@@ -134,7 +158,7 @@ export default function HomePage() {
         {/* Uploader Section */}
         {showUploader && (
           <div className="animate-fade-in">
-            <ScriptUploader onSuccess={(storyId) => (window.location.href = `/stories/${storyId}`)} />
+            <ScriptUploader onSuccess={(storyId) => router.push(`/stories/${storyId}`)} />
           </div>
         )}
 
@@ -160,7 +184,7 @@ export default function HomePage() {
               </div>
               <h3 className="text-lg font-bold text-slate-300">Belum ada cerita yang dibuat</h3>
               <p className="text-sm text-slate-500 max-w-md mx-auto">
-                Klik tombol "Buat Cerita Baru" untuk mengunggah naskah dan mengubahnya menjadi pertunjukan audio teatrikal.
+                Klik tombol &quot;Buat Cerita Baru&quot; untuk mengunggah naskah dan mengubahnya menjadi pertunjukan audio teatrikal.
               </p>
               <button
                 onClick={() => setShowUploader(true)}
