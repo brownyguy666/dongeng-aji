@@ -73,18 +73,18 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 selection:bg-purple-500 selection:text-white relative overflow-hidden">
       {/* Dynamic Aesthetic Background Lights */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-gradient-to-b from-purple-900/30 via-pink-900/20 to-transparent blur-3xl pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-250 h-125 bg-linear-to-b from-purple-900/30 via-pink-900/20 to-transparent blur-3xl pointer-events-none" />
       <div className="absolute top-1/3 -left-48 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute top-2/3 -right-48 w-96 h-96 bg-amber-600/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Navigation Header */}
       <header className="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between relative z-10 border-b border-slate-800/60">
         <div className="flex items-center space-x-3">
-          <div className="p-2.5 bg-gradient-to-tr from-purple-600 to-pink-500 rounded-2xl shadow-lg shadow-purple-600/30">
+          <div className="p-2.5 bg-linear-to-tr from-purple-600 to-pink-500 rounded-2xl shadow-lg shadow-purple-600/30">
             <Sparkles className="w-6 h-6 text-white" />
           </div>
           <div>
-            <span className="text-xl font-black bg-gradient-to-r from-purple-400 via-pink-400 to-amber-300 bg-clip-text text-transparent">
+            <span className="text-xl font-black bg-linear-to-r from-purple-400 via-pink-400 to-amber-300 bg-clip-text text-transparent">
               Storyteller AI
             </span>
             <span className="block text-[10px] uppercase font-semibold text-slate-400 tracking-wider">
@@ -95,7 +95,7 @@ export default function HomePage() {
 
         <button
           onClick={() => setShowUploader(!showUploader)}
-          className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold rounded-2xl shadow-lg shadow-purple-600/20 transition flex items-center space-x-2 text-sm"
+          className="px-5 py-2.5 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold rounded-2xl shadow-lg shadow-purple-600/20 transition flex items-center space-x-2 text-sm"
         >
           <PlusCircle className="w-4 h-4" />
           <span>{showUploader ? 'Tutup Form' : 'Buat Cerita Baru'}</span>
@@ -111,7 +111,7 @@ export default function HomePage() {
               <span>Theatrical AI Voice Synthesis & Procedural Ambient Soundscapes</span>
             </div>
 
-            <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-tight bg-gradient-to-r from-white via-slate-200 to-purple-200 bg-clip-text text-transparent">
+            <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-tight bg-linear-to-r from-white via-slate-200 to-purple-200 bg-clip-text text-transparent">
               Ubah Naskah Menjadi Sandiwara Radio AI Teatrikal
             </h1>
 
@@ -122,7 +122,7 @@ export default function HomePage() {
             <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
               <button
                 onClick={() => setShowUploader(true)}
-                className="px-8 py-4 bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:from-purple-500 hover:to-amber-400 text-white font-bold rounded-2xl shadow-xl shadow-purple-600/30 hover:scale-105 transition duration-200 flex items-center space-x-2 text-base"
+                className="px-8 py-4 bg-linear-to-r from-purple-600 via-pink-600 to-amber-500 hover:from-purple-500 hover:to-amber-400 text-white font-bold rounded-2xl shadow-xl shadow-purple-600/30 hover:scale-105 transition duration-200 flex items-center space-x-2 text-base"
               >
                 <Sparkles className="w-5 h-5" />
                 <span>Mulai Buat Cerita Teatrikal</span>
