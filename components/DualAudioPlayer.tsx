@@ -227,7 +227,7 @@ export default function DualAudioPlayer({
               <Radio className="w-3.5 h-3.5 animate-pulse text-purple-400" />
               <span>Multi-Character AI Storytelling</span>
             </span>
-            <h1 className="text-2xl md:text-3xl font-extrabold bg-gradient-to-r from-white via-slate-200 to-purple-200 bg-clip-text text-transparent">
+            <h1 className="text-2xl md:text-3xl font-extrabold bg-linear-to-r from-white via-slate-200 to-purple-200 bg-clip-text text-transparent">
               {storyTitle}
             </h1>
           </div>
@@ -243,7 +243,7 @@ export default function DualAudioPlayer({
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-600 to-pink-500 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-purple-500/20">
+                <div className="w-12 h-12 rounded-2xl bg-linear-to-tr from-purple-600 to-pink-500 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-purple-500/20">
                   {currentSegment.speaker_name.charAt(0).toUpperCase()}
                 </div>
                 <div>
@@ -289,7 +289,7 @@ export default function DualAudioPlayer({
             </div>
 
             {/* Subtitle / Dialogue Display */}
-            <div className="p-6 bg-slate-950/70 border border-slate-800/80 rounded-2xl min-h-[120px] flex items-center justify-center text-center shadow-inner">
+            <div className="p-6 bg-slate-950/70 border border-slate-800/80 rounded-2xl min-h-30 flex items-center justify-center text-center shadow-inner">
               <p className="text-lg md:text-xl font-medium leading-relaxed text-slate-100 italic">
                 "{currentSegment.dialogue_text}"
               </p>
@@ -310,7 +310,7 @@ export default function DualAudioPlayer({
 
                 <button
                   onClick={togglePlayPause}
-                  className="w-16 h-16 bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:from-purple-500 hover:to-amber-400 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-purple-600/30 hover:scale-105 active:scale-95 transition duration-200"
+                  className="w-16 h-16 bg-linear-to-r from-purple-600 via-pink-600 to-amber-500 hover:from-purple-500 hover:to-amber-400 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-purple-600/30 hover:scale-105 active:scale-95 transition duration-200"
                   title={isPlaying ? 'Jeda Cerita' : 'Putar Cerita'}
                 >
                   {isPlaying ? <Pause className="w-7 h-7" /> : <Play className="w-7 h-7 ml-1" />}
@@ -371,7 +371,7 @@ export default function DualAudioPlayer({
           </span>
         </div>
 
-        <div className="space-y-3 max-h-[380px] overflow-y-auto pr-2 custom-scrollbar">
+        <div className="space-y-3 max-h-95 overflow-y-auto pr-2 custom-scrollbar">
           {segments.map((seg, idx) => {
             const isActive = idx === currentIndex;
             return (
@@ -391,7 +391,7 @@ export default function DualAudioPlayer({
                 }`}
               >
                 <div
-                  className={`flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs ${
+                  className={`shrink-0 w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs ${
                     isActive
                       ? 'bg-purple-600 text-white shadow-md'
                       : 'bg-slate-800 text-slate-400'
@@ -424,7 +424,7 @@ export default function DualAudioPlayer({
                   </p>
                 </div>
 
-                <div className="flex-shrink-0 pt-1">
+                <div className="shrink-0 pt-1">
                   {seg.audio_url ? (
                     <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/50" title="Audio Siap" />
                   ) : seg.status === 'generating' ? (
