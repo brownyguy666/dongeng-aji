@@ -31,7 +31,6 @@ export default function StoryDetailPage({ params }: PageProps) {
     setLoading(true);
     setError(null);
     try {
-      // 1. Fetch story record
       const { data: storyData, error: storyErr } = await supabase
         .from('stories')
         .select('title, ambient_mood')
@@ -43,7 +42,6 @@ export default function StoryDetailPage({ params }: PageProps) {
       }
       setStory(storyData);
 
-      // 2. Fetch characters
       const { data: charData } = await supabase
         .from('story_characters')
         .select('character_name, base_voice, pitch, rate')
@@ -51,7 +49,6 @@ export default function StoryDetailPage({ params }: PageProps) {
 
       setCharacters((charData as CharacterInfo[]) || []);
 
-      // 3. Fetch segments ordered by sequence_order
       const { data: segData, error: segErr } = await supabase
         .from('story_segments')
         .select('*')
@@ -98,10 +95,58 @@ export default function StoryDetailPage({ params }: PageProps) {
   };
 
   useEffect(() => {
+    let isSubscribed = true;
+
+    const loadInitialData = async () => {
+      try {
+        const { data: storyData, error: storyErr } = await supabase
+          .from('stories')
+          .select('title, ambient_mood')
+          .eq('id', storyId)
+          .single();
+
+        if (storyErr || !storyData) {
+          throw new Error(`Cerita tidak ditemukan (${storyErr?.message || ''})`);
+        }
+
+        const { data: charData } = await supabase
+          .from('story_characters')
+          .select('character_name, base_voice, pitch, rate')
+          .eq('story_id', storyId);
+
+        const { data: segData, error: segErr } = await supabase
+          .from('story_segments')
+          .select('*')
+          .eq('story_id', storyId)
+          .order('sequence_order', { ascending: true });
+
+        if (segErr) {
+          throw new Error(`Gagal memuat segmen cerita: ${segErr.message}`);
+        }
+
+        if (isSubscribed) {
+          setStory(storyData);
+          setCharacters((charData as CharacterInfo[]) || []);
+          setSegments((segData as SegmentInfo[]) || []);
+          setLoading(false);
+        }
+      } catch (err: unknown) {
+        if (isSubscribed) {
+          const msg = err instanceof Error ? err.message : 'Gagal memuat data cerita';
+          setError(msg);
+          setLoading(false);
+        }
+      }
+    };
+
     if (storyId) {
-      loadStoryData();
+      loadInitialData();
     }
-  }, [storyId, loadStoryData]);
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [storyId]);
 
   // High-Efficiency Concurrent & Priority Audio Generation Pipeline
   useEffect(() => {
