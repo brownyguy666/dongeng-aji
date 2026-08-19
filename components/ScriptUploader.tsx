@@ -111,7 +111,7 @@ export default function ScriptUploader({ onSuccess }: ScriptUploaderProps) {
           <Sparkles className="w-6 h-6" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-amber-300 bg-clip-text text-transparent">
+          <h2 className="text-2xl font-bold bg-linear-to-r from-purple-400 via-pink-400 to-amber-300 bg-clip-text text-transparent">
             Buat Storyteller AI Baru
           </h2>
           <p className="text-sm text-slate-400">
@@ -122,7 +122,7 @@ export default function ScriptUploader({ onSuccess }: ScriptUploaderProps) {
 
       {error && (
         <div className="mb-6 p-4 bg-rose-500/10 border border-rose-500/30 rounded-2xl flex items-start space-x-3 text-rose-300 text-sm animate-fade-in">
-          <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
           <span>{error}</span>
         </div>
       )}
@@ -219,7 +219,7 @@ Serigala: (Berbisik) Katakan, sahabatku..."
             </div>
             <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
               <div
-                className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all duration-300"
+                className="bg-linear-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all duration-300"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -230,7 +230,7 @@ Serigala: (Berbisik) Katakan, sahabatku..."
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-4 px-6 bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:from-purple-500 hover:via-pink-500 hover:to-amber-400 text-white font-semibold rounded-2xl shadow-lg shadow-purple-600/30 hover:shadow-purple-600/50 disabled:opacity-50 disabled:cursor-not-allowed transition duration-200 flex items-center justify-center space-x-2 text-base"
+          className="w-full py-4 px-6 bg-linear-to-r from-purple-600 via-pink-600 to-amber-500 hover:from-purple-500 hover:via-pink-500 hover:to-amber-400 text-white font-semibold rounded-2xl shadow-lg shadow-purple-600/30 hover:shadow-purple-600/50 disabled:opacity-50 disabled:cursor-not-allowed transition duration-200 flex items-center justify-center space-x-2 text-base"
         >
           {loading ? (
             <>
