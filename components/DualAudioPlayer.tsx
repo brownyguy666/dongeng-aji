@@ -74,7 +74,7 @@ export default function DualAudioPlayer({
     (c) => c.character_name.toLowerCase() === currentSegment?.speaker_name?.toLowerCase()
   );
 
-  // Initialize Ambient Audio Channel (Real ambient MP3 loop, zero electronic buzzing)
+  // Initialize Ambient Audio Channel
   useEffect(() => {
     const mood = ambientMood || 'forest_night';
     const audio = new Audio(`/audio/ambient/${mood}.mp3`);
@@ -86,7 +86,7 @@ export default function DualAudioPlayer({
       audio.pause();
       audio.src = '';
     };
-  }, [ambientMood]);
+  }, [ambientMood, isMuted, isDucked, ambientVolume]);
 
   // Sync Ambient Volume with Auto-Ducking
   useEffect(() => {
@@ -106,12 +106,15 @@ export default function DualAudioPlayer({
   useEffect(() => {
     if (!currentSegment) return;
 
-    // If segment has no audio URL yet, trigger on-demand generation
+    // Trigger on-demand generation asynchronously if audio_url is missing
     if (!currentSegment.audio_url && onGenerateSegment && currentSegment.status !== 'generating') {
-      setIsGeneratingCurrent(true);
-      onGenerateSegment(currentSegment.id)
-        .then(() => setIsGeneratingCurrent(false))
-        .catch(() => setIsGeneratingCurrent(false));
+      const segId = currentSegment.id;
+      Promise.resolve().then(() => {
+        setIsGeneratingCurrent(true);
+        onGenerateSegment(segId)
+          .then(() => setIsGeneratingCurrent(false))
+          .catch(() => setIsGeneratingCurrent(false));
+      });
     }
 
     if (currentSegment.audio_url) {
@@ -140,7 +143,7 @@ export default function DualAudioPlayer({
         }
       }
     }
-  }, [currentIndex, currentSegment?.audio_url, isPlaying]);
+  }, [currentIndex, currentSegment, isPlaying, isMuted, onGenerateSegment]);
 
   const togglePlayPause = () => {
     const audio = voiceAudioRef.current;
@@ -291,7 +294,7 @@ export default function DualAudioPlayer({
             {/* Subtitle / Dialogue Display */}
             <div className="p-6 bg-slate-950/70 border border-slate-800/80 rounded-2xl min-h-30 flex items-center justify-center text-center shadow-inner">
               <p className="text-lg md:text-xl font-medium leading-relaxed text-slate-100 italic">
-                "{currentSegment.dialogue_text}"
+                &ldquo;{currentSegment.dialogue_text}&rdquo;
               </p>
             </div>
 
